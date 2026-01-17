@@ -1,0 +1,5 @@
+{
+  "name": "Story Generator",
+  "description": "Consistent AI Character Story Creator using Gemini 3 Pro for high-quality 4K image generation.",
+  "requestFramePermissions": []
+}

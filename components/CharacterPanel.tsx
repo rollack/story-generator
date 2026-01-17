@@ -1,0 +1,248 @@
+import React from 'react';
+import { Character, AspectRatio, PromptItem, Quality } from '../types';
+import { Upload, X, Trash2, Plus, Wand2, CheckCircle2 } from './Icons';
+
+interface CharacterPanelProps {
+  characters: Character[];
+  onUpdateCharacter: (id: string, updates: Partial<Character>) => void;
+  aspectRatio: AspectRatio;
+  setAspectRatio: (ratio: AspectRatio) => void;
+  quality: Quality;
+  setQuality: (q: Quality) => void;
+  prompts: PromptItem[];
+  setPrompts: React.Dispatch<React.SetStateAction<PromptItem[]>>;
+  onGenerate: () => void;
+  isGenerating: boolean;
+}
+
+const CharacterPanel: React.FC<CharacterPanelProps> = ({
+  characters,
+  onUpdateCharacter,
+  aspectRatio,
+  setAspectRatio,
+  quality,
+  setQuality,
+  prompts,
+  setPrompts,
+  onGenerate,
+  isGenerating
+}) => {
+
+  const handleFileUpload = (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        // Remove data URL prefix to get raw base64 if needed
+        const base64Clean = result.split(',')[1];
+        onUpdateCharacter(id, { 
+            imageData: base64Clean, 
+            mimeType: file.type 
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const addPrompt = () => {
+    setPrompts(prev => [...prev, { id: crypto.randomUUID(), text: '' }]);
+  };
+
+  const removePrompt = (id: string) => {
+    if (prompts.length > 1) {
+      setPrompts(prev => prev.filter(p => p.id !== id));
+    }
+  };
+
+  const updatePrompt = (id: string, text: string) => {
+    setPrompts(prev => prev.map(p => p.id === id ? { ...p, text } : p));
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-slate-900 border-r border-slate-800 overflow-y-auto custom-scrollbar">
+      <div className="p-6 space-y-8">
+        
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+            <span className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center text-sm">R</span>
+            Robert’s Tech Tool
+          </h1>
+          <p className="text-slate-400 text-sm mt-1">Consistent Character Generator</p>
+        </div>
+
+        {/* 1. Character Reference Images */}
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">1. Character References</h2>
+          <div className="grid grid-cols-2 gap-3">
+            {characters.map((char) => (
+              <div 
+                key={char.id} 
+                className={`relative group rounded-xl border-2 transition-all duration-200 overflow-hidden ${char.isSelected ? 'border-blue-500 bg-slate-800' : 'border-slate-700 bg-slate-800/50'}`}
+              >
+                <div className="p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <input
+                      type="text"
+                      value={char.name}
+                      onChange={(e) => onUpdateCharacter(char.id, { name: e.target.value })}
+                      className="bg-transparent text-xs font-medium text-white placeholder-slate-500 focus:outline-none w-24"
+                      placeholder="Name..."
+                    />
+                    <input
+                      type="checkbox"
+                      checked={char.isSelected}
+                      onChange={(e) => onUpdateCharacter(char.id, { isSelected: e.target.checked })}
+                      className="w-4 h-4 rounded border-slate-600 text-blue-600 focus:ring-offset-slate-900 focus:ring-blue-500 bg-slate-700"
+                    />
+                  </div>
+                  
+                  <div className="aspect-square rounded-lg bg-slate-900/50 border border-slate-700 border-dashed flex items-center justify-center relative overflow-hidden group-hover:border-slate-500 transition-colors">
+                    {char.imageData ? (
+                      <>
+                        <img 
+                          src={`data:${char.mimeType};base64,${char.imageData}`} 
+                          alt={char.name} 
+                          className="w-full h-full object-cover" 
+                        />
+                        <button 
+                          onClick={() => onUpdateCharacter(char.id, { imageData: null })}
+                          className="absolute top-1 right-1 p-1 bg-red-500/80 hover:bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={12} />
+                        </button>
+                      </>
+                    ) : (
+                      <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center text-slate-500 hover:text-slate-300 transition-colors">
+                        <Upload size={20} className="mb-1" />
+                        <span className="text-[10px]">Upload</span>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={(e) => handleFileUpload(char.id, e)}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* 2. Settings (Ratio & Quality) */}
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">2. Settings</h2>
+          
+          <div className="space-y-3">
+             {/* Aspect Ratio */}
+             <div className="relative">
+                 <select
+                  value={aspectRatio}
+                  onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
+                  className="w-full appearance-none bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer text-sm"
+                >
+                  <option value="16:9">16:9 (Landscape)</option>
+                  <option value="9:16">9:16 (Portrait)</option>
+                  <option value="1:1">1:1 (Square)</option>
+                  <option value="4:3">4:3 (Classic)</option>
+                  <option value="Custom">Custom</option>
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-slate-400">
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                </div>
+              </div>
+
+              {/* Quality Toggle */}
+              <div className="flex bg-slate-800 p-1 rounded-lg border border-slate-700">
+                 <button
+                    onClick={() => setQuality('Standard')}
+                    className={`flex-1 py-2 text-xs font-medium rounded-md transition-all ${quality === 'Standard' ? 'bg-slate-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                 >
+                    Standard
+                 </button>
+                 <button
+                    onClick={() => setQuality('4K')}
+                    className={`flex-1 py-2 text-xs font-medium rounded-md transition-all flex items-center justify-center gap-1 ${quality === '4K' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                 >
+                    Pro (4K)
+                 </button>
+              </div>
+          </div>
+          
+          {quality === '4K' && (
+              <p className="text-[10px] text-blue-400 flex items-center gap-1">
+                 <CheckCircle2 size={10} /> Requires API Key
+              </p>
+          )}
+        </section>
+
+        {/* 3. Prompt List Input */}
+        <section className="space-y-4 flex-grow">
+          <div className="flex items-center justify-between">
+             <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">3. Story Prompts</h2>
+             <span className="text-xs text-slate-500">{prompts.length} Prompts</span>
+          </div>
+          
+          <div className="space-y-3">
+            {prompts.map((prompt, index) => (
+              <div key={prompt.id} className="flex gap-2 items-start group">
+                <span className="text-xs font-mono text-slate-500 mt-3 w-6 text-right">{(index + 1).toString().padStart(2, '0')}</span>
+                <textarea
+                  value={prompt.text}
+                  onChange={(e) => updatePrompt(prompt.id, e.target.value)}
+                  placeholder={`Scene description ${index + 1}...`}
+                  className="flex-grow bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-white placeholder-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none min-h-[80px] resize-y custom-scrollbar"
+                />
+                <button 
+                  onClick={() => removePrompt(prompt.id)}
+                  className="mt-2 text-slate-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                  disabled={prompts.length <= 1}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+          
+          <button 
+            onClick={addPrompt}
+            className="w-full py-2 border border-dashed border-slate-700 rounded-lg text-slate-400 hover:text-white hover:border-slate-500 hover:bg-slate-800 transition-all flex items-center justify-center gap-2 text-sm"
+          >
+            <Plus size={16} /> Add Another Prompt
+          </button>
+        </section>
+
+        {/* 4. Action Button */}
+        <section className="sticky bottom-0 pt-4 pb-0 bg-slate-900 z-10">
+          <button
+            onClick={onGenerate}
+            disabled={isGenerating}
+            className={`w-full py-4 px-6 rounded-xl font-bold text-white shadow-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2
+              ${isGenerating 
+                ? 'bg-slate-700 cursor-not-allowed' 
+                : 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 shadow-red-900/20'
+              }`}
+          >
+             {isGenerating ? (
+               <>
+                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                 Generating {quality === '4K' ? '4K' : ''} Images...
+               </>
+             ) : (
+               <>
+                 <Wand2 size={20} />
+                 Generate {quality === '4K' ? '4K' : ''} Images
+               </>
+             )}
+          </button>
+        </section>
+
+      </div>
+    </div>
+  );
+};
+
+export default CharacterPanel;
