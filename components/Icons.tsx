@@ -9,7 +9,11 @@ import {
   Wand2, 
   Image as ImageIcon,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Save,
+  FolderOpen,
+  GripVertical,
+  Pencil
 } from 'lucide-react';
 
 export { 
@@ -22,5 +26,9 @@ export {
   Wand2, 
   ImageIcon,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Save,
+  FolderOpen,
+  GripVertical,
+  Pencil
 };

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Character, AspectRatio, PromptItem, Quality } from '../types';
-import { Upload, X, Trash2, Plus, Wand2, CheckCircle2 } from './Icons';
+import { Upload, X, Trash2, Plus, Wand2, CheckCircle2, Save, FolderOpen, GripVertical } from './Icons';
 
 interface CharacterPanelProps {
   characters: Character[];
@@ -13,6 +13,8 @@ interface CharacterPanelProps {
   setPrompts: React.Dispatch<React.SetStateAction<PromptItem[]>>;
   onGenerate: () => void;
   isGenerating: boolean;
+  onSaveCharacters: () => void;
+  onLoadCharacters: () => void;
 }
 
 const CharacterPanel: React.FC<CharacterPanelProps> = ({
@@ -25,8 +27,11 @@ const CharacterPanel: React.FC<CharacterPanelProps> = ({
   prompts,
   setPrompts,
   onGenerate,
-  isGenerating
+  isGenerating,
+  onSaveCharacters,
+  onLoadCharacters
 }) => {
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   const handleFileUpload = (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -59,6 +64,41 @@ const CharacterPanel: React.FC<CharacterPanelProps> = ({
     setPrompts(prev => prev.map(p => p.id === id ? { ...p, text } : p));
   };
 
+  // Drag and Drop Handlers
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    // Required for Firefox to allow dragging
+    e.dataTransfer.setData("text/plain", index.toString());
+    
+    // Create a custom drag image ghost if needed, or rely on browser default
+    // e.dataTransfer.setDragImage(e.currentTarget as Element, 0, 0);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault(); // Necessary to allow dropping
+  };
+
+  const handleDragEnter = (index: number) => {
+    if (draggedIndex === null || draggedIndex === index) return;
+
+    // Reorder the list immediately (optimistic UI)
+    const newPrompts = [...prompts];
+    const draggedItem = newPrompts[draggedIndex];
+    
+    // Remove from old position
+    newPrompts.splice(draggedIndex, 1);
+    // Insert at new position
+    newPrompts.splice(index, 0, draggedItem);
+
+    setPrompts(newPrompts);
+    setDraggedIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+  };
+
   return (
     <div className="flex flex-col h-full bg-slate-900 border-r border-slate-800 overflow-y-auto custom-scrollbar">
       <div className="p-6 space-y-8">
@@ -74,7 +114,25 @@ const CharacterPanel: React.FC<CharacterPanelProps> = ({
 
         {/* 1. Character Reference Images */}
         <section className="space-y-4">
-          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">1. Character References</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">1. Character References</h2>
+            <div className="flex gap-2">
+              <button
+                onClick={onSaveCharacters}
+                className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-md transition-colors"
+                title="Save Characters to Browser Storage"
+              >
+                <Save size={16} />
+              </button>
+              <button
+                onClick={onLoadCharacters}
+                className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-md transition-colors"
+                title="Load Characters from Browser Storage"
+              >
+                <FolderOpen size={16} />
+              </button>
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             {characters.map((char) => (
               <div 
@@ -188,18 +246,34 @@ const CharacterPanel: React.FC<CharacterPanelProps> = ({
           
           <div className="space-y-3">
             {prompts.map((prompt, index) => (
-              <div key={prompt.id} className="flex gap-2 items-start group">
-                <span className="text-xs font-mono text-slate-500 mt-3 w-6 text-right">{(index + 1).toString().padStart(2, '0')}</span>
+              <div 
+                key={prompt.id} 
+                className={`flex gap-2 items-start group transition-all duration-200 ${draggedIndex === index ? 'opacity-40' : 'opacity-100'}`}
+                draggable
+                onDragStart={(e) => handleDragStart(e, index)}
+                onDragOver={handleDragOver}
+                onDragEnter={() => handleDragEnter(index)}
+                onDragEnd={handleDragEnd}
+              >
+                {/* Drag Handle */}
+                <div className="mt-4 text-slate-600 cursor-grab hover:text-slate-400 active:cursor-grabbing">
+                  <GripVertical size={16} />
+                </div>
+
+                <span className="text-xs font-mono text-slate-500 mt-3 w-6 text-right select-none">{(index + 1).toString().padStart(2, '0')}</span>
+                
                 <textarea
                   value={prompt.text}
                   onChange={(e) => updatePrompt(prompt.id, e.target.value)}
                   placeholder={`Scene description ${index + 1}...`}
                   className="flex-grow bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-white placeholder-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none min-h-[80px] resize-y custom-scrollbar"
                 />
+                
                 <button 
                   onClick={() => removePrompt(prompt.id)}
                   className="mt-2 text-slate-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                   disabled={prompts.length <= 1}
+                  title="Remove Prompt"
                 >
                   <Trash2 size={16} />
                 </button>
