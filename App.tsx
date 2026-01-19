@@ -82,6 +82,36 @@ const App: React.FC = () => {
     setShowConfirmation(true);
   };
 
+  const handleGeneratePreview = async (charId: string) => {
+    const char = characters.find(c => c.id === charId);
+    if (!char || !char.imageData) return;
+    
+    setIsGenerating(true);
+    try {
+        // Create a temporary character object that is forced to be selected
+        // This ensures the service uses it even if the user unchecked the box
+        const tempChar = { ...char, isSelected: true };
+        
+        const previewPrompt: PromptItem = {
+            id: `preview-${Date.now()}`,
+            text: `A detailed portrait of this character, front facing, neutral background, 8k resolution, cinematic lighting.`
+        };
+
+        await generateImagesBatch(
+            [tempChar], // Only pass this character
+            [previewPrompt],
+            "1:1", // Square for portraits
+            quality,
+            handleImageGenerated
+        );
+    } catch (error) {
+        console.error("Preview generation failed", error);
+        alert("Failed to generate preview.");
+    } finally {
+        setIsGenerating(false);
+    }
+  };
+
   const handleConfirmGenerate = async () => {
     setShowConfirmation(false);
     setIsGenerating(true);
@@ -149,6 +179,7 @@ const App: React.FC = () => {
             prompts={prompts}
             setPrompts={setPrompts}
             onGenerate={handleRequestGenerate}
+            onGeneratePreview={handleGeneratePreview}
             isGenerating={isGenerating}
             onSaveCharacters={handleSaveCharacters}
             onLoadCharacters={handleLoadCharacters}

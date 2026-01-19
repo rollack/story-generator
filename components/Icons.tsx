@@ -13,7 +13,8 @@ import {
   Save,
   FolderOpen,
   GripVertical,
-  Pencil
+  Pencil,
+  Sparkles
 } from 'lucide-react';
 
 export { 
@@ -30,5 +31,6 @@ export {
   Save,
   FolderOpen,
   GripVertical,
-  Pencil
+  Pencil,
+  Sparkles
 };

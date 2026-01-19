@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Character, AspectRatio, PromptItem, Quality } from '../types';
-import { Upload, X, Trash2, Plus, Wand2, CheckCircle2, Save, FolderOpen, GripVertical } from './Icons';
+import { Upload, X, Trash2, Plus, Wand2, CheckCircle2, Save, FolderOpen, GripVertical, Sparkles } from './Icons';
 
 interface CharacterPanelProps {
   characters: Character[];
@@ -12,6 +12,7 @@ interface CharacterPanelProps {
   prompts: PromptItem[];
   setPrompts: React.Dispatch<React.SetStateAction<PromptItem[]>>;
   onGenerate: () => void;
+  onGeneratePreview: (id: string) => void;
   isGenerating: boolean;
   onSaveCharacters: () => void;
   onLoadCharacters: () => void;
@@ -27,6 +28,7 @@ const CharacterPanel: React.FC<CharacterPanelProps> = ({
   prompts,
   setPrompts,
   onGenerate,
+  onGeneratePreview,
   isGenerating,
   onSaveCharacters,
   onLoadCharacters
@@ -164,11 +166,23 @@ const CharacterPanel: React.FC<CharacterPanelProps> = ({
                           alt={char.name} 
                           className="w-full h-full object-cover" 
                         />
+                        {/* Clear Button */}
                         <button 
                           onClick={() => onUpdateCharacter(char.id, { imageData: null })}
                           className="absolute top-1 right-1 p-1 bg-red-500/80 hover:bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Remove Image"
                         >
                           <X size={12} />
+                        </button>
+                        
+                        {/* Preview Button */}
+                        <button
+                          onClick={() => onGeneratePreview(char.id)}
+                          disabled={isGenerating}
+                          className="absolute bottom-1 right-1 p-1.5 bg-blue-600/90 hover:bg-blue-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                          title="Generate Preview Portrait"
+                        >
+                           <Sparkles size={12} />
                         </button>
                       </>
                     ) : (
