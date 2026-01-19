@@ -1,5 +1,6 @@
 import React from 'react';
 import { Wand2 } from './Icons';
+import { QualityMode, StandardQuality } from '../types';
 
 interface ConfirmationDialogProps {
   isOpen: boolean;
@@ -7,7 +8,8 @@ interface ConfirmationDialogProps {
   onCancel: () => void;
   promptCount: number;
   characterCount: number;
-  quality: string;
+  qualityMode: QualityMode;
+  standardQuality: StandardQuality;
   aspectRatio: string;
 }
 
@@ -17,7 +19,8 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   onCancel,
   promptCount,
   characterCount,
-  quality,
+  qualityMode,
+  standardQuality,
   aspectRatio
 }) => {
   if (!isOpen) return null;
@@ -43,7 +46,10 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
           </div>
           <div className="flex justify-between py-1 border-b border-slate-700/50 pb-2 pt-2">
              <span>Quality</span>
-             <span className={`font-bold ${quality === '4K' ? 'text-blue-400' : 'text-emerald-400'}`}>{quality}</span>
+             <span className={`font-bold ${qualityMode === '4K' ? 'text-blue-400' : 'text-emerald-400'}`}>
+                {qualityMode}
+                {qualityMode === 'Standard' && <span className="text-slate-500 font-normal"> ({standardQuality})</span>}
+             </span>
           </div>
           <div className="flex justify-between py-1 pt-2">
              <span>Aspect Ratio</span>

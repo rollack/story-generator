@@ -8,7 +8,8 @@ export interface Character {
 
 export type AspectRatio = "16:9" | "9:16" | "1:1" | "4:3" | "Custom";
 
-export type Quality = "Standard" | "4K";
+export type QualityMode = "Standard" | "4K";
+export type StandardQuality = "High" | "Balanced" | "Fast";
 
 export interface GeneratedImage {
   id: string;
@@ -28,5 +29,6 @@ export interface GenerateOptions {
   aspectRatio: string;
   characters: Character[];
   prompts: PromptItem[];
-  quality: Quality;
+  qualityMode: QualityMode;
+  standardQuality: StandardQuality;
 }

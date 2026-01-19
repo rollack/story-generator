@@ -1,5 +1,5 @@
 import { GoogleGenAI, Part } from "@google/genai";
-import { Character, GeneratedImage, PromptItem, Quality } from "../types";
+import { Character, GeneratedImage, PromptItem, QualityMode, StandardQuality } from "../types";
 
 // Helper to get formatted date DDMonYYYY
 export const getFormattedDate = (): string => {
@@ -14,7 +14,8 @@ export const generateImagesBatch = async (
   characters: Character[],
   prompts: PromptItem[],
   aspectRatio: string,
-  quality: Quality,
+  qualityMode: QualityMode,
+  standardQuality: StandardQuality,
   onImageGenerated: (img: GeneratedImage) => void
 ): Promise<void> => {
   
@@ -25,7 +26,7 @@ export const generateImagesBatch = async (
   const activeCharacters = characters.filter(c => c.isSelected && c.imageData);
 
   // Determine model and config based on quality
-  const isPro = quality === '4K';
+  const isPro = qualityMode === '4K';
   const model = isPro ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image';
   
   // We process prompts sequentially to avoid hitting rate limits too hard, 
@@ -64,6 +65,10 @@ export const generateImagesBatch = async (
       if (isPro) {
         imageConfig.imageSize = "4K";
       }
+      
+      // Note: standardQuality (High/Balanced/Fast) is currently mapped to the same model (gemini-2.5-flash-image)
+      // as per current API capabilities for general image generation. 
+      // In a more complex setup, this could adjust safety settings or use different model variants if available.
 
       const response = await ai.models.generateContent({
         model: model,

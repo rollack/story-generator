@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
-import { Character, AspectRatio, PromptItem, Quality } from '../types';
+import { Character, AspectRatio, PromptItem, QualityMode, StandardQuality } from '../types';
 import { Upload, X, Trash2, Plus, Wand2, CheckCircle2, Save, FolderOpen, GripVertical, Sparkles } from './Icons';
 
 interface CharacterPanelProps {
   characters: Character[];
   onUpdateCharacter: (id: string, updates: Partial<Character>) => void;
+  onToggleAllCharacters: (isSelected: boolean) => void;
+  onAddCharacter: () => void;
+  onDeleteCharacter: (id: string) => void;
   aspectRatio: AspectRatio;
   setAspectRatio: (ratio: AspectRatio) => void;
-  quality: Quality;
-  setQuality: (q: Quality) => void;
+  qualityMode: QualityMode;
+  setQualityMode: (q: QualityMode) => void;
+  standardQuality: StandardQuality;
+  setStandardQuality: (sq: StandardQuality) => void;
   prompts: PromptItem[];
   setPrompts: React.Dispatch<React.SetStateAction<PromptItem[]>>;
   onGenerate: () => void;
@@ -21,10 +26,15 @@ interface CharacterPanelProps {
 const CharacterPanel: React.FC<CharacterPanelProps> = ({
   characters,
   onUpdateCharacter,
+  onToggleAllCharacters,
+  onAddCharacter,
+  onDeleteCharacter,
   aspectRatio,
   setAspectRatio,
-  quality,
-  setQuality,
+  qualityMode,
+  setQualityMode,
+  standardQuality,
+  setStandardQuality,
   prompts,
   setPrompts,
   onGenerate,
@@ -68,13 +78,17 @@ const CharacterPanel: React.FC<CharacterPanelProps> = ({
 
   // Drag and Drop Handlers
   const handleDragStart = (e: React.DragEvent, index: number) => {
+    // Prevent drag if interacting with the textarea or buttons to allow text selection/editing
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON' || target.closest('button')) {
+        e.preventDefault();
+        return;
+    }
+
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = "move";
     // Required for Firefox to allow dragging
     e.dataTransfer.setData("text/plain", index.toString());
-    
-    // Create a custom drag image ghost if needed, or rely on browser default
-    // e.dataTransfer.setDragImage(e.currentTarget as Element, 0, 0);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -135,6 +149,20 @@ const CharacterPanel: React.FC<CharacterPanelProps> = ({
               </button>
             </div>
           </div>
+          
+          {/* Select All Checkbox */}
+          <div className="flex justify-end px-1">
+             <label className="flex items-center gap-2 cursor-pointer group">
+                <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-500 group-hover:text-slate-300 transition-colors">Select All</span>
+                <input
+                  type="checkbox"
+                  checked={characters.length > 0 && characters.every(c => c.isSelected)}
+                  onChange={(e) => onToggleAllCharacters(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-600 text-blue-600 focus:ring-offset-slate-900 focus:ring-blue-500 bg-slate-700 cursor-pointer"
+                />
+             </label>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             {characters.map((char) => (
               <div 
@@ -147,15 +175,24 @@ const CharacterPanel: React.FC<CharacterPanelProps> = ({
                       type="text"
                       value={char.name}
                       onChange={(e) => onUpdateCharacter(char.id, { name: e.target.value })}
-                      className="bg-transparent text-xs font-medium text-white placeholder-slate-500 focus:outline-none w-24"
+                      className="bg-transparent text-xs font-medium text-white placeholder-slate-500 focus:outline-none w-20"
                       placeholder="Name..."
                     />
-                    <input
-                      type="checkbox"
-                      checked={char.isSelected}
-                      onChange={(e) => onUpdateCharacter(char.id, { isSelected: e.target.checked })}
-                      className="w-4 h-4 rounded border-slate-600 text-blue-600 focus:ring-offset-slate-900 focus:ring-blue-500 bg-slate-700"
-                    />
+                    <div className="flex items-center gap-1.5">
+                        <button
+                            onClick={() => onDeleteCharacter(char.id)}
+                            className="text-slate-600 hover:text-red-500 transition-colors p-0.5"
+                            title="Remove Character Slot"
+                        >
+                            <Trash2 size={12} />
+                        </button>
+                        <input
+                        type="checkbox"
+                        checked={char.isSelected}
+                        onChange={(e) => onUpdateCharacter(char.id, { isSelected: e.target.checked })}
+                        className="w-4 h-4 rounded border-slate-600 text-blue-600 focus:ring-offset-slate-900 focus:ring-blue-500 bg-slate-700"
+                        />
+                    </div>
                   </div>
                   
                   <div className="aspect-square rounded-lg bg-slate-900/50 border border-slate-700 border-dashed flex items-center justify-center relative overflow-hidden group-hover:border-slate-500 transition-colors">
@@ -202,6 +239,15 @@ const CharacterPanel: React.FC<CharacterPanelProps> = ({
               </div>
             ))}
           </div>
+          
+          <button 
+             onClick={onAddCharacter}
+             disabled={characters.length >= 10}
+             className="w-full py-2 border border-dashed border-slate-700 rounded-lg text-slate-400 hover:text-white hover:border-slate-500 hover:bg-slate-800 transition-all flex items-center justify-center gap-2 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+             <Plus size={14} /> 
+             {characters.length >= 10 ? 'Max Characters Reached' : `Add Character (${characters.length}/10)`}
+          </button>
         </section>
 
         {/* 2. Settings (Ratio & Quality) */}
@@ -227,28 +273,51 @@ const CharacterPanel: React.FC<CharacterPanelProps> = ({
                 </div>
               </div>
 
-              {/* Quality Toggle */}
-              <div className="flex bg-slate-800 p-1 rounded-lg border border-slate-700">
-                 <button
-                    onClick={() => setQuality('Standard')}
-                    className={`flex-1 py-2 text-xs font-medium rounded-md transition-all ${quality === 'Standard' ? 'bg-slate-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
-                 >
-                    Standard
-                 </button>
-                 <button
-                    onClick={() => setQuality('4K')}
-                    className={`flex-1 py-2 text-xs font-medium rounded-md transition-all flex items-center justify-center gap-1 ${quality === '4K' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
-                 >
-                    Pro (4K)
-                 </button>
+              {/* Quality Toggle Switch */}
+              <div className="bg-slate-800 p-3 rounded-lg border border-slate-700 space-y-3">
+                 <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-300 font-medium">Image Quality</span>
+                    <div 
+                      className="flex items-center gap-2 cursor-pointer"
+                      onClick={() => setQualityMode(qualityMode === 'Standard' ? '4K' : 'Standard')}
+                    >
+                        <span className={`text-xs ${qualityMode === 'Standard' ? 'text-white font-bold' : 'text-slate-500'}`}>Std</span>
+                        
+                        <div className={`w-10 h-5 rounded-full p-0.5 transition-colors duration-300 ${qualityMode === '4K' ? 'bg-blue-600' : 'bg-slate-600'}`}>
+                            <div className={`w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform duration-300 ${qualityMode === '4K' ? 'translate-x-5' : 'translate-x-0'}`} />
+                        </div>
+                        
+                        <span className={`text-xs ${qualityMode === '4K' ? 'text-blue-400 font-bold' : 'text-slate-500'}`}>4K</span>
+                    </div>
+                 </div>
+
+                 {/* Standard Quality Dropdown */}
+                 {qualityMode === 'Standard' && (
+                     <div className="relative animate-in fade-in slide-in-from-top-1 duration-200">
+                        <select
+                           value={standardQuality}
+                           onChange={(e) => setStandardQuality(e.target.value as StandardQuality)}
+                           className="w-full appearance-none bg-slate-700 border border-slate-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+                        >
+                           <option value="High">High (Default)</option>
+                           <option value="Balanced">Balanced</option>
+                           <option value="Fast">Fast</option>
+                        </select>
+                        <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-400">
+                           <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                        </div>
+                     </div>
+                 )}
+                 
+                 {qualityMode === '4K' && (
+                     <div className="bg-blue-900/20 border border-blue-500/20 rounded p-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                        <p className="text-[10px] text-blue-400 flex items-center gap-1">
+                            <CheckCircle2 size={10} /> Requires paid API Key
+                        </p>
+                     </div>
+                 )}
               </div>
           </div>
-          
-          {quality === '4K' && (
-              <p className="text-[10px] text-blue-400 flex items-center gap-1">
-                 <CheckCircle2 size={10} /> Requires API Key
-              </p>
-          )}
         </section>
 
         {/* 3. Prompt List Input */}
@@ -317,12 +386,12 @@ const CharacterPanel: React.FC<CharacterPanelProps> = ({
              {isGenerating ? (
                <>
                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                 Generating {quality === '4K' ? '4K' : ''} Images...
+                 Generating {qualityMode === '4K' ? '4K' : ''} Images...
                </>
              ) : (
                <>
                  <Wand2 size={20} />
-                 Generate {quality === '4K' ? '4K' : ''} Images
+                 Generate {qualityMode === '4K' ? '4K' : ''} Images
                </>
              )}
           </button>

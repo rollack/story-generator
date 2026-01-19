@@ -3,7 +3,7 @@ import CharacterPanel from './components/CharacterPanel';
 import ResultsGallery from './components/ResultsGallery';
 import ApiKeySelector from './components/ApiKeySelector';
 import ConfirmationDialog from './components/ConfirmationDialog';
-import { Character, GeneratedImage, PromptItem, AspectRatio, Quality } from './types';
+import { Character, GeneratedImage, PromptItem, AspectRatio, QualityMode, StandardQuality } from './types';
 import { generateImagesBatch } from './services/geminiService';
 
 const App: React.FC = () => {
@@ -20,7 +20,8 @@ const App: React.FC = () => {
   ]);
   
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>("16:9");
-  const [quality, setQuality] = useState<Quality>("4K");
+  const [qualityMode, setQualityMode] = useState<QualityMode>("4K");
+  const [standardQuality, setStandardQuality] = useState<StandardQuality>("High");
   
   const [prompts, setPrompts] = useState<PromptItem[]>([
     { id: 'p1', text: '' },
@@ -34,6 +35,32 @@ const App: React.FC = () => {
   // Handlers
   const handleUpdateCharacter = (id: string, updates: Partial<Character>) => {
     setCharacters(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+  };
+
+  const handleToggleAllCharacters = (isSelected: boolean) => {
+    setCharacters(prev => prev.map(c => ({ ...c, isSelected })));
+  };
+
+  const handleAddCharacter = () => {
+    if (characters.length >= 10) return;
+    setCharacters(prev => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        name: `Character ${prev.length + 1}`,
+        imageData: null,
+        mimeType: '',
+        isSelected: true
+      }
+    ]);
+  };
+
+  const handleDeleteCharacter = (id: string) => {
+    if (characters.length <= 1) {
+        alert("You must have at least one character slot.");
+        return;
+    }
+    setCharacters(prev => prev.filter(c => c.id !== id));
   };
 
   const handleUpdateImage = (id: string, updates: Partial<GeneratedImage>) => {
@@ -101,7 +128,8 @@ const App: React.FC = () => {
             [tempChar], // Only pass this character
             [previewPrompt],
             "1:1", // Square for portraits
-            quality,
+            qualityMode,
+            standardQuality,
             handleImageGenerated
         );
     } catch (error) {
@@ -124,7 +152,8 @@ const App: React.FC = () => {
         characters,
         validPrompts,
         aspectRatio,
-        quality,
+        qualityMode,
+        standardQuality,
         handleImageGenerated
       );
     } catch (error) {
@@ -136,7 +165,7 @@ const App: React.FC = () => {
   };
 
   // Logic to determine if we should block the UI for API key
-  const shouldShowApiKeySelector = quality === '4K' && !apiKeyReady;
+  const shouldShowApiKeySelector = qualityMode === '4K' && !apiKeyReady;
   
   // Calculate stats for confirmation
   const activeCharacterCount = characters.filter(c => c.isSelected && c.imageData).length;
@@ -148,7 +177,7 @@ const App: React.FC = () => {
       {shouldShowApiKeySelector && (
         <ApiKeySelector 
             onReady={() => setApiKeyReady(true)} 
-            onSwitchToStandard={() => setQuality("Standard")}
+            onSwitchToStandard={() => setQualityMode("Standard")}
         />
       )}
 
@@ -158,7 +187,8 @@ const App: React.FC = () => {
         onCancel={() => setShowConfirmation(false)}
         promptCount={validPromptCount}
         characterCount={activeCharacterCount}
-        quality={quality}
+        qualityMode={qualityMode}
+        standardQuality={standardQuality}
         aspectRatio={aspectRatio}
       />
       
@@ -172,10 +202,15 @@ const App: React.FC = () => {
           <CharacterPanel 
             characters={characters}
             onUpdateCharacter={handleUpdateCharacter}
+            onToggleAllCharacters={handleToggleAllCharacters}
+            onAddCharacter={handleAddCharacter}
+            onDeleteCharacter={handleDeleteCharacter}
             aspectRatio={aspectRatio}
             setAspectRatio={setAspectRatio}
-            quality={quality}
-            setQuality={setQuality}
+            qualityMode={qualityMode}
+            setQualityMode={setQualityMode}
+            standardQuality={standardQuality}
+            setStandardQuality={setStandardQuality}
             prompts={prompts}
             setPrompts={setPrompts}
             onGenerate={handleRequestGenerate}
